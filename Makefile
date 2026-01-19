@@ -11,7 +11,7 @@ resources-deploy:
 			echo "Deploying sample application: $$app..."; \
 			if [ -d "sample-resources/$$app" ]; then \
 				if [ -f "sample-resources/$$app/deploy.sh" ]; then \
-					cd "sample-resources/$$app" && ./deploy.sh && cd ../..; \
+					(cd "sample-resources/$$app" && ./deploy.sh); \
 					echo "Application $$app deployed successfully!"; \
 				else \
 					echo "Error: deploy.sh not found in sample-resources/$$app"; \
@@ -27,7 +27,7 @@ resources-deploy:
 		for dir in sample-resources/*/; do \
 			if [ -f "$$dir/deploy.sh" ]; then \
 				echo "Deploying $$dir..."; \
-				cd "$$dir" && ./deploy.sh && cd ../..; \
+				(cd "$$dir" && ./deploy.sh); \
 			fi \
 		done; \
 		echo "All applications deployed successfully!"; \
@@ -48,7 +48,7 @@ resources-destroy:
 			echo "Destroying sample application: $$app..."; \
 			if [ -d "sample-resources/$$app" ]; then \
 				if [ -f "sample-resources/$$app/destroy.sh" ]; then \
-					cd "sample-resources/$$app" && ./destroy.sh && cd ../..; \
+					(cd "sample-resources/$$app" && ./destroy.sh); \
 					echo "Application $$app destroyed successfully!"; \
 				else \
 					echo "Error: destroy.sh not found in sample-resources/$$app"; \
@@ -64,7 +64,7 @@ resources-destroy:
 		for dir in sample-resources/*/; do \
 			if [ -f "$$dir/destroy.sh" ]; then \
 				echo "Destroying $$dir..."; \
-				cd "$$dir" && ./destroy.sh && cd ../..; \
+				(cd "$$dir" && ./destroy.sh); \
 			fi \
 		done; \
 		echo "All applications destroyed successfully!"; \
