@@ -70,12 +70,6 @@ if command -v podman &> /dev/null; then
     echo -e "${YELLOW}Detected Podman${NC}"
     CONTAINER_RUNTIME="podman"
 
-    # Check if podman is running
-    if ! podman info &> /dev/null; then
-        echo -e "${RED}Error: Podman is installed but not working correctly${NC}"
-        exit 1
-    fi
-
     # Platform-specific podman setup
     if [[ "$OS" == "darwin" ]]; then
         # macOS - use podman machine
@@ -103,15 +97,27 @@ if command -v podman &> /dev/null; then
             echo -e "${GREEN}Using Podman socket: $DOCKER_HOST${NC}"
         fi
         
+        # Verify podman is working (after starting machine)
+        if ! podman info &> /dev/null; then
+            echo -e "${RED}Error: Podman machine started but not working correctly${NC}"
+            exit 1
+        fi
+        
     elif [[ "$OS" == "linux" ]]; then
-        # Linux - use systemd socket
-    if ! systemctl --user is-active --quiet podman.socket; then
-        echo -e "${YELLOW}Starting podman socket for kind...${NC}"
-        systemctl --user start podman.socket
-        systemctl --user enable podman.socket
-    fi
-
-    export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock
+        # Linux - verify podman is working first
+        if ! podman info &> /dev/null; then
+            echo -e "${RED}Error: Podman is installed but not working correctly${NC}"
+            exit 1
+        fi
+        
+        # Set up systemd socket
+        if ! systemctl --user is-active --quiet podman.socket; then
+            echo -e "${YELLOW}Starting podman socket for kind...${NC}"
+            systemctl --user start podman.socket
+            systemctl --user enable podman.socket
+        fi
+        
+        export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock
         echo -e "${GREEN}Using Podman socket: $DOCKER_HOST${NC}"
     fi
 
