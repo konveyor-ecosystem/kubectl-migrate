@@ -3,4 +3,4 @@
 echo "# Using kubectl context: $(kubectl config current-context)"
 
 # Delete all resources
-kubectl delete -k ./
+kubectl delete --ignore-not-found -k ./

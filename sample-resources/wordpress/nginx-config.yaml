@@ -18,6 +18,7 @@ data:
             listen 80;
             root /var/www/html;
             index index.php;
+            client_max_body_size 32m;
 
             location / {
                 try_files $uri $uri/ /index.php?$args;

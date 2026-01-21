@@ -6,12 +6,14 @@ PASS_MYSQL="$(openssl rand -base64 16)"
 PASS_MYSQL_WORDPRESS="$(openssl rand -base64 16)"
 PASS_WORDPRESS="$(openssl rand -base64 12)"
 
+umask 077
 cat > .env <<EOF
 MYSQL_ROOT_PASSWORD=$PASS_MYSQL
 MYSQL_WORDPRESS_PASSWORD=$PASS_MYSQL_WORDPRESS
 WORDPRESS_ADMIN_PASSWORD=$PASS_WORDPRESS
 EOF
 fi
+chmod 600 .env
 
 echo "# Using kubectl context: $(kubectl config current-context)"
 
