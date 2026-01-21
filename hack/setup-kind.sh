@@ -32,11 +32,11 @@ echo -e "${YELLOW}Detected OS: $OS, Architecture: $ARCH${NC}"
 # --- Part 1: Install kubectl if missing ---
 if ! command -v kubectl &> /dev/null; then
     echo -e "${YELLOW}kubectl not found. Installing...${NC}"
-    K8S_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+    K8S_VERSION=$(curl -fL -s https://dl.k8s.io/release/stable.txt)
     
     case $OS in
         linux|darwin)
-            curl -LO "https://dl.k8s.io/release/${K8S_VERSION}/bin/${OS}/${ARCH}/kubectl"
+            curl -fLO "https://dl.k8s.io/release/${K8S_VERSION}/bin/${OS}/${ARCH}/kubectl"
             chmod +x ./kubectl
             sudo mv ./kubectl /usr/local/bin/kubectl
             ;;
@@ -91,7 +91,7 @@ CONTAINER_RUNTIME=""
 if command -v podman &> /dev/null; then
     echo -e "${YELLOW}Detected Podman${NC}"
     CONTAINER_RUNTIME="podman"
-    
+
     # Platform-specific podman setup
     if [[ "$OS" == "darwin" ]]; then
         # macOS - use podman machine
