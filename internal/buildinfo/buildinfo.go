@@ -8,4 +8,7 @@ var (
 	Version string = "v0.0.6"
 
 	CranelibVersion string = cranelibversion.Version
+
+	Commit    string
+	BuildDate string
 )
