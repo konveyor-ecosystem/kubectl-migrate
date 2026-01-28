@@ -883,6 +883,9 @@ type quantityVar struct {
 }
 
 func (q *quantityVar) String() string {
+	if q.quantity == nil {
+		return ""
+	}
 	return q.quantity.String()
 }
 
