@@ -31,8 +31,7 @@ PLATFORMS = linux/amd64 linux/arm64 darwin/amd64 darwin/arm64
 
 all: build
 
-## help: Display this help message
-help:
+help: ## Display this help message
 	@echo "kubectl-migrate Makefile"
 	@echo ""
 	@echo "Usage:"
@@ -41,15 +40,13 @@ help:
 	@echo "Targets:"
 	@awk 'BEGIN {FS = ":.*##"; printf ""} /^[a-zA-Z_-]+:.*?##/ { printf "  %-15s %s\n", $$1, $$2 } /^##@/ { printf "\n%s\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-## build: Build the binary for the current platform
-build:
+build: ## Build the binary for the current platform
 	@echo "Building $(BINARY_NAME) version $(VERSION)..."
 	@mkdir -p $(BUILD_DIR)
 	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PACKAGE)
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
-## build-all: Build binaries for all platforms
-build-all: clean
+build-all: clean ## Build binaries for all platforms
 	@echo "Building for all platforms..."
 	@$(foreach platform,$(PLATFORMS), \
 		$(eval OS = $(word 1,$(subst /, ,$(platform)))) \
@@ -62,55 +59,46 @@ build-all: clean
 	)
 	@echo "All builds complete!"
 
-## clean: Remove built binaries
-clean:
+clean: ## Remove built binaries
 	@echo "Cleaning..."
 	$(GOCLEAN)
 	rm -rf $(BUILD_DIR)
 	@echo "Clean complete!"
 
-## test-unit: Run golang unit tests
-test-unit:
+test-unit: ## Run golang unit tests
 	@echo "Running tests..."
 	$(GOTEST) -v ./...
 
-## deps: Download dependencies
-deps:
+deps: ## Download dependencies
 	@echo "Downloading dependencies..."
 	$(GOMOD) download
 	$(GOMOD) tidy
 	@echo "Dependencies updated!"
 
-## install: Build and install the binary to $GOPATH/bin
-install:
+install: ## Build and install the binary to $GOPATH/bin
 	@echo "Installing $(BINARY_NAME) to $(GOPATH)/bin..."
 	$(GOBUILD) $(LDFLAGS) -o $(GOPATH)/bin/$(BINARY_NAME) $(MAIN_PACKAGE)
 	@echo "Installation complete!"
 	@echo "You can now use: kubectl migrate <command>"
 
-## fmt: Format Go code
-fmt:
+fmt: ## Format Go code
 	@echo "Formatting code..."
 	$(GOCMD) fmt ./...
 
-## vet: Run go vet
-vet:
+vet: ## Run go vet
 	@echo "Running go vet..."
 	$(GOCMD) vet ./...
 
-## lint: Run golangci-lint (requires golangci-lint to be installed)
-lint:
+lint: ## Run golangci-lint (requires golangci-lint to be installed)
 	@echo "Running golangci-lint..."
 	golangci-lint run
 
-## check: Run fmt, vet, and test-unit
-check: fmt vet test-unit
+check: fmt vet test-unit ## Run fmt, vet, and test-unit
 	@echo "All checks passed!"
 
 ###############################################################################
 
-## resources-deploy: Deploy sample application(s) to cluster (optionally specify app names)
-resources-deploy:
+resources-deploy: ## Deploy sample application(s) to cluster (optionally specify app names)
 	@if [ "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
 		for app in $(filter-out $@,$(MAKECMDGOALS)); do \
 			echo "Deploying sample application: $$app..."; \
@@ -138,8 +126,7 @@ resources-deploy:
 		echo "All applications deployed successfully!"; \
 	fi
 
-## resources-destroy: Remove sample application(s) from cluster (optionally specify app names)
-resources-destroy:
+resources-destroy: ## Remove sample application(s) from cluster (optionally specify app names)
 	@if [ "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
 		for app in $(filter-out $@,$(MAKECMDGOALS)); do \
 			echo "Destroying sample application: $$app..."; \
@@ -166,8 +153,7 @@ resources-destroy:
 		done; \
 		echo "All applications destroyed successfully!"; \
 
-## resources-validate: Validate sample application(s) in cluster (optionally specify app names)
-resources-validate:
+resources-validate: ## Validate sample application(s) in cluster (optionally specify app names)
 	@if [ "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
 		failed=""; \
 		for app in $(filter-out $@,$(MAKECMDGOALS)); do \
