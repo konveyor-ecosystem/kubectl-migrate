@@ -2,7 +2,6 @@ package tunnel_api
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/konveyor/crane-lib/connect/tunnel_api"
 	"github.com/sirupsen/logrus"
