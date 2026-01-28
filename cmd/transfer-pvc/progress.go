@@ -216,7 +216,7 @@ type dataSize struct {
 }
 
 func addDataSize(a, b *dataSize) *dataSize {
-	if b == nil {
+	if a == nil || b == nil {
 		return nil
 	}
 	newDs := &dataSize{}
