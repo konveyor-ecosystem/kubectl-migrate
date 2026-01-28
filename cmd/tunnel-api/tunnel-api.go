@@ -155,21 +155,19 @@ func (t *TunnelAPIOptions) run() error {
 
 	srcConfig, err := t.getRestConfigFromContext(t.SourceContext)
 	if err != nil {
-		log.Fatal(err, "unable to get source config")
+		return fmt.Errorf("unable to get source config: %w", err)
 	}
 
 	dstConfig, err := t.getRestConfigFromContext(t.DestinationContext)
 	if err != nil {
-		log.Fatal(err, "unable to get destination config")
+		return fmt.Errorf("unable to get destination config: %w", err)
 	}
 
-	_, err = t.getClientFromContext(t.SourceContext)
-	if err != nil {
-		log.Fatal(err, "unable to get source client")
+	if _, err = t.getClientFromContext(t.SourceContext); err != nil {
+		return fmt.Errorf("unable to get source client: %w", err)
 	}
-	_, err = t.getClientFromContext(t.DestinationContext)
-	if err != nil {
-		log.Fatal(err, "unable to get destination client")
+	if _, err = t.getClientFromContext(t.DestinationContext); err != nil {
+		return fmt.Errorf("unable to get destination client: %w", err)
 	}
 
 	tunnel.SrcConfig = srcConfig
@@ -182,10 +180,10 @@ func (t *TunnelAPIOptions) run() error {
 	tunnel.Options.ProxyUser = t.ProxyUser
 	tunnel.Options.ProxyPass = t.ProxyPass
 
-	err = tunnel_api.Openvpn(tunnel)
-	if err != nil {
-		log.Fatal(err, "Unable to create Tunnel")
+	if err = tunnel_api.Openvpn(tunnel); err != nil {
+		return fmt.Errorf("unable to create tunnel: %w", err)
 	}
 
 	return nil
+}
 }
