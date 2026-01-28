@@ -98,6 +98,10 @@ check: fmt vet test-unit ## Run fmt, vet, and test-unit
 
 ###############################################################################
 
+# Dummy target to prevent "No rule to make target" errors when passing app names as arguments
+%:
+	@:
+
 resources-deploy: ## Deploy sample application(s) to cluster (optionally specify app names)
 	@if [ "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
 		for app in $(filter-out $@,$(MAKECMDGOALS)); do \
