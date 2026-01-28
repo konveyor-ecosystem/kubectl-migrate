@@ -27,7 +27,7 @@ LDFLAGS = -ldflags "\
 # Platforms for cross-compilation
 PLATFORMS = linux/amd64 linux/arm64 darwin/amd64 darwin/arm64
 
-.PHONY: all build build-all clean test deps install resources-deploy resources-destroy resources-validate help
+.PHONY: all build build-all clean test-unit deps install check fmt vet lint resources-deploy resources-destroy resources-validate help
 
 all: build
 
@@ -69,7 +69,7 @@ clean:
 	rm -rf $(BUILD_DIR)
 	@echo "Clean complete!"
 
-## test: Run golang unit tests
+## test-unit: Run golang unit tests
 test-unit:
 	@echo "Running tests..."
 	$(GOTEST) -v ./...
@@ -103,17 +103,13 @@ lint:
 	@echo "Running golangci-lint..."
 	golangci-lint run
 
-## check: Run fmt, vet, and test
-check: fmt vet test
+## check: Run fmt, vet, and test-unit
+check: fmt vet test-unit
 	@echo "All checks passed!"
 
 ###############################################################################
 
-# Deploy sample applications
-# Usage: make resources-deploy [app1 app2 ...]
-# Example: make resources-deploy hello-world
-# Example: make resources-deploy hello-world another-app
-# If no arguments provided, deploys all applications
+## resources-deploy: Deploy sample application(s) to cluster (optionally specify app names)
 resources-deploy:
 	@if [ "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
 		for app in $(filter-out $@,$(MAKECMDGOALS)); do \
@@ -142,11 +138,7 @@ resources-deploy:
 		echo "All applications deployed successfully!"; \
 	fi
 
-# Destroy sample applications
-# Usage: make resources-destroy [app1 app2 ...]
-# Example: make resources-destroy hello-world
-# Example: make resources-destroy hello-world another-app
-# If no arguments provided, destroys all applications
+## resources-destroy: Remove sample application(s) from cluster (optionally specify app names)
 resources-destroy:
 	@if [ "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
 		for app in $(filter-out $@,$(MAKECMDGOALS)); do \
@@ -174,11 +166,7 @@ resources-destroy:
 		done; \
 		echo "All applications destroyed successfully!"; \
 
-# Validate sample applications
-# Usage: make resources-validate [app1 app2 ...]
-# Example: make resources-validate hello-world
-# Example: make resources-validate hello-world wordpress
-# If no arguments provided, validates all applications
+## resources-validate: Validate sample application(s) in cluster (optionally specify app names)
 resources-validate:
 	@if [ "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
 		failed=""; \
@@ -233,20 +221,3 @@ resources-validate:
 	fi
 
 ###############################################################################
-
-# Show help
-help:
-	@echo "Available targets:"
-	@echo "  resources-deploy [app1 app2 ...]  - Deploy sample application(s) to Kubernetes cluster"
-	@echo "                                      If app names are specified, deploy only those applications"
-	@echo "                                      If no app names specified, deploy all applications"
-	@echo "                                      Example: make resources-deploy hello-world"
-	@echo "  resources-destroy [app1 app2 ...] - Remove sample application(s) from Kubernetes cluster"
-	@echo "                                      If app names are specified, destroy only those applications"
-	@echo "                                      If no app names specified, destroy all applications"
-	@echo "                                      Example: make resources-destroy hello-world"
-	@echo "  resources-validate [app1 app2 ...] - Validate sample application(s) in Kubernetes cluster"
-	@echo "                                       If app names are specified, validate only those applications"
-	@echo "                                       If no app names specified, validate all applications"
-	@echo "                                       Example: make resources-validate hello-world"
-	@echo "  help                               - Show this help message"
