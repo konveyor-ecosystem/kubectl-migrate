@@ -20,18 +20,31 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Validate app exists
+    - name: Validate app name
       shell: bash
       run: |
-        if [ ! -d "sample-resources/${{ inputs.app-name }}" ]; then
-          echo "❌ Error: Application '${{ inputs.app-name }}' not found"
+        APP_NAME="${{ inputs.app-name }}"
+        
+        # Validate app-name contains only safe characters (alphanumeric, hyphens, underscores)
+        if [[ ! "$APP_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+          echo "❌ Error: Invalid app-name '$APP_NAME'"
+          echo "App name must contain only letters, numbers, hyphens, and underscores"
           exit 1
         fi
-        if [ ! -f "sample-resources/${{ inputs.app-name }}/deploy.sh" ]; then
-          echo "❌ Error: deploy.sh not found for '${{ inputs.app-name }}'"
+        
+        # Check app directory exists
+        if [ ! -d "sample-resources/$APP_NAME" ]; then
+          echo "❌ Error: Application '$APP_NAME' not found"
           exit 1
         fi
-        echo "✅ Application '${{ inputs.app-name }}' exists."
+        
+        # Check deploy.sh exists
+        if [ ! -f "sample-resources/$APP_NAME/deploy.sh" ]; then
+          echo "❌ Error: deploy.sh not found for '$APP_NAME'"
+          exit 1
+        fi
+        
+        echo "✅ Application '$APP_NAME' validated successfully"
 
     - name: Deploy application
       id: deploy

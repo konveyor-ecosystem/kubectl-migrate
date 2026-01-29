@@ -8,29 +8,22 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - name: Validate app name
+      shell: bash
+      run: |
+        APP_NAME="${{ inputs.app-name }}"
+        
+        # Validate app-name contains only safe characters (alphanumeric, hyphens, underscores)
+        if [[ ! "$APP_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+          echo "❌ Error: Invalid app-name '$APP_NAME'"
+          echo "App name must contain only letters, numbers, hyphens, and underscores"
+          exit 1
+        fi
+        
+        echo "✅ App name '$APP_NAME' validated successfully"
+
     - name: Destroy application
       shell: bash
       run: |
         echo "🧹 Destroying ${{ inputs.app-name }}..."
-        
-        if [ ! -d "sample-resources/${{ inputs.app-name }}" ]; then
-          echo "⚠️  Warning: Application directory 'sample-resources/${{ inputs.app-name }}' not found"
-          echo "Attempting generic cleanup..."
-          kubectl delete all -l app=${{ inputs.app-name }} --ignore-not-found=true || true
-          exit 0
-        fi
-        
-        if [ -f "sample-resources/${{ inputs.app-name }}/destroy.sh" ]; then
-          echo "Running destroy.sh for ${{ inputs.app-name }}..."
-          (cd "sample-resources/${{ inputs.app-name }}" && ./destroy.sh) || true
-          echo "✅ Destroy completed using destroy.sh"
-        else
-          echo "⚠️  No destroy.sh found for ${{ inputs.app-name }}"
-          echo "Attempting generic cleanup..."
-          kubectl delete all -l app=${{ inputs.app-name }} --ignore-not-found=true || true
-          echo "✅ Generic cleanup completed"
-        fi
-        
-        echo ""
-        echo "📊 Remaining resources for ${{ inputs.app-name }}:"
-        kubectl get all -l app=${{ inputs.app-name }} || echo "No resources found (destroy successful)"
+        make resources-destroy ${{ inputs.app-name }} || true
