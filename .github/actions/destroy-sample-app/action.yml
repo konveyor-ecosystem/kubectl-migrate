@@ -1,0 +1,36 @@
+name: 'Destroy App'
+description: 'Destroy a deployed Kubernetes application'
+inputs:
+  app-name:
+    description: 'Name of the sample application to destroy (e.g., hello-world, wordpress)'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Destroy application
+      shell: bash
+      run: |
+        echo "🧹 Destroying ${{ inputs.app-name }}..."
+        
+        if [ ! -d "sample-resources/${{ inputs.app-name }}" ]; then
+          echo "⚠️  Warning: Application directory 'sample-resources/${{ inputs.app-name }}' not found"
+          echo "Attempting generic cleanup..."
+          kubectl delete all -l app=${{ inputs.app-name }} --ignore-not-found=true || true
+          exit 0
+        fi
+        
+        if [ -f "sample-resources/${{ inputs.app-name }}/destroy.sh" ]; then
+          echo "Running destroy.sh for ${{ inputs.app-name }}..."
+          (cd "sample-resources/${{ inputs.app-name }}" && ./destroy.sh) || true
+          echo "✅ Destroy completed using destroy.sh"
+        else
+          echo "⚠️  No destroy.sh found for ${{ inputs.app-name }}"
+          echo "Attempting generic cleanup..."
+          kubectl delete all -l app=${{ inputs.app-name }} --ignore-not-found=true || true
+          echo "✅ Generic cleanup completed"
+        fi
+        
+        echo ""
+        echo "📊 Remaining resources for ${{ inputs.app-name }}:"
+        kubectl get all -l app=${{ inputs.app-name }} || echo "No resources found (destroy successful)"
