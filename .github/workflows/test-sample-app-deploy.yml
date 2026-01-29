@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - add-reusable-actions
     paths:
       - '.github/workflows/test-sample-app-deploy.yml'
       - '.github/actions/deploy-sample-app/**'
