@@ -1,0 +1,49 @@
+name: Test Sample App Deploy
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/test-sample-app-deploy.yml'
+      - '.github/actions/deploy-sample-app/**'
+      - '.github/actions/destroy-sample-app/**'
+      - 'sample-resources/wordpress/**'
+      - 'Makefile'
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  deploy-sample-app:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Kind Cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: sample-src
+
+      - name: Verify cluster
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Deploy and validate wordpress
+        uses: ./.github/actions/deploy-sample-app
+        id: deploy-wordpress
+        with:
+          app-name: wordpress
+          verify-health: 'true' #Optional - Triggers validate.sh script
+
+      # Add any additional steps here - app is still running
+      - name: Check wordpress deployment status and time taken
+        run: |
+          echo "Status: ${{ steps.deploy-wordpress.outputs.deployment-status }}"
+          echo "Time taken: ${{ steps.deploy-wordpress.outputs.deployment-time }} seconds"
+
+      # Destroy the app at the end of the workflow
+      - name: Destroy wordpress
+        if: always()
+        uses: ./.github/actions/destroy-sample-app
+        with:
+          app-name: wordpress

@@ -1,0 +1,82 @@
+name: 'Deploy App'
+description: 'Deploy and verify a sample Kubernetes application'
+inputs:
+  app-name:
+    description: 'Name of the sample application to deploy (e.g., hello-world, wordpress)'
+    required: true
+  verify-health:
+    description: 'Perform additional health checks beyond kubectl wait'
+    required: false
+    default: 'false'
+
+outputs:
+  deployment-status:
+    description: 'Status of the deployment (success/failed)'
+    value: ${{ steps.deploy.outputs.status }}
+  deployment-time:
+    description: 'Time taken to deploy (seconds)'
+    value: ${{ steps.deploy.outputs.duration }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate app name
+      shell: bash
+      run: |
+        APP_NAME="${{ inputs.app-name }}"
+        
+        # Validate app-name: must start with alphanumeric, then allow alphanumeric, hyphens, underscores
+        if [[ ! "$APP_NAME" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]]; then
+          echo "❌ Error: Invalid app-name '$APP_NAME'"
+          echo "App name must start with a letter or number, followed by letters, numbers, hyphens, or underscores"
+          exit 1
+        fi
+        
+        # Check app directory exists
+        if [ ! -d "sample-resources/$APP_NAME" ]; then
+          echo "❌ Error: Application '$APP_NAME' not found"
+          exit 1
+        fi
+        
+        # Check deploy.sh exists
+        if [ ! -f "sample-resources/$APP_NAME/deploy.sh" ]; then
+          echo "❌ Error: deploy.sh not found for '$APP_NAME'"
+          exit 1
+        fi
+        
+        echo "✅ Application '$APP_NAME' validated successfully"
+
+    - name: Deploy application
+      id: deploy
+      shell: bash
+      run: |
+        START_TIME=$(date +%s)
+        echo "🚀 Deploying ${{ inputs.app-name }}..."
+        
+        if make resources-deploy ${{ inputs.app-name }}; then
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          echo "status=success" >> $GITHUB_OUTPUT
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+          echo "✅ Deployment completed in ${DURATION}s"
+        else
+          echo "status=failed" >> $GITHUB_OUTPUT
+          echo "❌ Deployment failed"
+          exit 1
+        fi
+
+    - name: Verify deployment health
+      if: inputs.verify-health == 'true'
+      shell: bash
+      run: |
+        echo "🔍 Verifying deployment health for ${{ inputs.app-name }}..."
+        make resources-validate ${{ inputs.app-name }}
+
+    - name: Show deployment status
+      if: always()
+      shell: bash
+      run: |
+        echo "📊 Deployment Status Summary"
+        echo "============================"
+        kubectl get all -l app=${{ inputs.app-name }} || true
+        kubectl get all --all-namespaces | grep -i "${{ inputs.app-name }}" || true

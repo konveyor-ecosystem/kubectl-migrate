@@ -1,0 +1,29 @@
+name: 'Destroy App'
+description: 'Destroy a deployed Kubernetes application'
+inputs:
+  app-name:
+    description: 'Name of the sample application to destroy (e.g., hello-world, wordpress)'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate app name
+      shell: bash
+      run: |
+        APP_NAME="${{ inputs.app-name }}"
+        
+        # Validate app-name: must start with alphanumeric, then allow alphanumeric, hyphens, underscores
+        if [[ ! "$APP_NAME" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]]; then
+          echo "❌ Error: Invalid app-name '$APP_NAME'"
+          echo "App name must start with a letter or number, followed by letters, numbers, hyphens, or underscores"
+          exit 1
+        fi
+        
+        echo "✅ App name '$APP_NAME' validated successfully"
+
+    - name: Destroy application
+      shell: bash
+      run: |
+        echo "🧹 Destroying ${{ inputs.app-name }}..."
+        make resources-destroy ${{ inputs.app-name }} || true
