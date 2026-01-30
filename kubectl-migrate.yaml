@@ -1,0 +1,68 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: migrate
+spec:
+  version: v0.1.0
+  homepage: https://github.com/konveyor-ecosystem/kubectl-migrate
+  shortDescription: Kubernetes workload migration tool
+  description: |
+    kubectl-migrate is a kubectl plugin that helps migrate workloads and their
+    state between Kubernetes clusters. It integrates all features from the crane
+    migration tool.
+
+    Key features:
+    - Export resources from namespaces
+    - Transform exported manifests with JSONPatch
+    - Apply transformed resources to target clusters
+    - Transfer PersistentVolumeClaims between clusters
+    - Plugin system for extensibility
+    - Image registry synchronization support
+
+  caveats: |
+    This plugin requires:
+    - Access to source and target Kubernetes clusters
+    - Appropriate RBAC permissions for reading and writing resources
+    - For PVC transfers, additional storage backend access may be required
+
+    Usage:
+      kubectl migrate export <namespace> [flags]
+      kubectl migrate transform [flags]
+      kubectl migrate apply [flags]
+      kubectl migrate transfer-pvc [flags]
+      kubectl migrate plugin-manager [subcommand]
+
+    For more information, visit: https://github.com/konveyor-ecosystem/kubectl-migrate
+
+  platforms:
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: amd64
+    uri: https://github.com/konveyor-ecosystem/kubectl-migrate/releases/download/v0.1.0/kubectl-migrate-darwin-amd64.tar.gz
+    sha256: "" # To be filled during release
+    bin: kubectl-migrate
+
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: arm64
+    uri: https://github.com/konveyor-ecosystem/kubectl-migrate/releases/download/v0.1.0/kubectl-migrate-darwin-arm64.tar.gz
+    sha256: "" # To be filled during release
+    bin: kubectl-migrate
+
+  - selector:
+      matchLabels:
+        os: linux
+        arch: amd64
+    uri: https://github.com/konveyor-ecosystem/kubectl-migrate/releases/download/v0.1.0/kubectl-migrate-linux-amd64.tar.gz
+    sha256: "" # To be filled during release
+    bin: kubectl-migrate
+
+  - selector:
+      matchLabels:
+        os: linux
+        arch: arm64
+    uri: https://github.com/konveyor-ecosystem/kubectl-migrate/releases/download/v0.1.0/kubectl-migrate-linux-arm64.tar.gz
+    sha256: "" # To be filled during release
+    bin: kubectl-migrate

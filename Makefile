@@ -1,11 +1,108 @@
-.PHONY: resources-deploy resources-destroy resources-validate help
+# Makefile for kubectl-migrate
 
-# Deploy sample applications
-# Usage: make resources-deploy [app1 app2 ...]
-# Example: make resources-deploy hello-world
-# Example: make resources-deploy hello-world another-app
-# If no arguments provided, deploys all applications
-resources-deploy:
+# Version and Build Info
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# Binary Info
+BINARY_NAME = kubectl-migrate
+MAIN_PACKAGE = .
+BUILD_DIR = bin
+
+# Go parameters
+GOCMD = go
+GOBUILD = $(GOCMD) build
+GOCLEAN = $(GOCMD) clean
+GOTEST = $(GOCMD) test
+GOGET = $(GOCMD) get
+GOMOD = $(GOCMD) mod
+
+# Linker flags to inject version info
+LDFLAGS = -ldflags "\
+	-X 'github.com/konveyor-ecosystem/kubectl-migrate/internal/buildinfo.Version=$(VERSION)' \
+	-X 'github.com/konveyor-ecosystem/kubectl-migrate/internal/buildinfo.Commit=$(COMMIT)' \
+	-X 'github.com/konveyor-ecosystem/kubectl-migrate/internal/buildinfo.BuildDate=$(BUILD_DATE)'"
+
+# Platforms for cross-compilation
+PLATFORMS = linux/amd64 linux/arm64 darwin/amd64 darwin/arm64
+
+.PHONY: all build build-all clean test-unit deps install check fmt vet lint resources-deploy resources-destroy resources-validate help
+
+all: build
+
+help: ## Display this help message
+	@echo "kubectl-migrate Makefile"
+	@echo ""
+	@echo "Usage:"
+	@echo "  make <target>"
+	@echo ""
+	@echo "Targets:"
+	@awk 'BEGIN {FS = ":.*##"; printf ""} /^[a-zA-Z_-]+:.*?##/ { printf "  %-15s %s\n", $$1, $$2 } /^##@/ { printf "\n%s\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+
+build: ## Build the binary for the current platform
+	@echo "Building $(BINARY_NAME) version $(VERSION)..."
+	@mkdir -p $(BUILD_DIR)
+	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PACKAGE)
+	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
+
+build-all: clean ## Build binaries for all platforms
+	@echo "Building for all platforms..."
+	@$(foreach platform,$(PLATFORMS), \
+		$(eval OS = $(word 1,$(subst /, ,$(platform)))) \
+		$(eval ARCH = $(word 2,$(subst /, ,$(platform)))) \
+		$(eval OUTPUT = $(BUILD_DIR)/$(BINARY_NAME)-$(OS)-$(ARCH)) \
+		$(if $(filter windows,$(OS)),$(eval OUTPUT := $(OUTPUT).exe)) \
+		echo "Building for $(OS)/$(ARCH)..." && \
+		GOOS=$(OS) GOARCH=$(ARCH) $(GOBUILD) $(LDFLAGS) -o $(OUTPUT) $(MAIN_PACKAGE) && \
+		echo "  ✓ $(OUTPUT)" || exit 1; \
+	)
+	@echo "All builds complete!"
+
+clean: ## Remove built binaries
+	@echo "Cleaning..."
+	$(GOCLEAN)
+	rm -rf $(BUILD_DIR)
+	@echo "Clean complete!"
+
+test-unit: ## Run golang unit tests
+	@echo "Running tests..."
+	$(GOTEST) -v ./...
+
+deps: ## Download dependencies
+	@echo "Downloading dependencies..."
+	$(GOMOD) download
+	$(GOMOD) tidy
+	@echo "Dependencies updated!"
+
+install: ## Build and install the binary to $GOPATH/bin
+	@echo "Installing $(BINARY_NAME) to $(GOPATH)/bin..."
+	$(GOBUILD) $(LDFLAGS) -o $(GOPATH)/bin/$(BINARY_NAME) $(MAIN_PACKAGE)
+	@echo "Installation complete!"
+	@echo "You can now use: kubectl migrate <command>"
+
+fmt: ## Format Go code
+	@echo "Formatting code..."
+	$(GOCMD) fmt ./...
+
+vet: ## Run go vet
+	@echo "Running go vet..."
+	$(GOCMD) vet ./...
+
+lint: ## Run golangci-lint (requires golangci-lint to be installed)
+	@echo "Running golangci-lint..."
+	golangci-lint run
+
+check: fmt vet test-unit ## Run fmt, vet, and test-unit
+	@echo "All checks passed!"
+
+###############################################################################
+
+# Dummy target to prevent "No rule to make target" errors when passing app names as arguments
+%:
+	@:
+
+resources-deploy: ## Deploy sample application(s) to cluster (optionally specify app names)
 	@if [ "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
 		for app in $(filter-out $@,$(MAKECMDGOALS)); do \
 			echo "Deploying sample application: $$app..."; \
@@ -33,16 +130,7 @@ resources-deploy:
 		echo "All applications deployed successfully!"; \
 	fi
 
-# Catch-all target to prevent "No rule to make target" errors for app names
-%:
-	@:
-
-# Destroy sample applications
-# Usage: make resources-destroy [app1 app2 ...]
-# Example: make resources-destroy hello-world
-# Example: make resources-destroy hello-world another-app
-# If no arguments provided, destroys all applications
-resources-destroy:
+resources-destroy: ## Remove sample application(s) from cluster (optionally specify app names)
 	@if [ "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
 		for app in $(filter-out $@,$(MAKECMDGOALS)); do \
 			echo "Destroying sample application: $$app..."; \
@@ -68,14 +156,8 @@ resources-destroy:
 			fi \
 		done; \
 		echo "All applications destroyed successfully!"; \
-	fi
 
-# Validate sample applications
-# Usage: make resources-validate [app1 app2 ...]
-# Example: make resources-validate hello-world
-# Example: make resources-validate hello-world wordpress
-# If no arguments provided, validates all applications
-resources-validate:
+resources-validate: ## Validate sample application(s) in cluster (optionally specify app names)
 	@if [ "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
 		failed=""; \
 		for app in $(filter-out $@,$(MAKECMDGOALS)); do \
@@ -127,20 +209,3 @@ resources-validate:
 			echo "All applications validated successfully!"; \
 		fi \
 	fi
-
-# Show help
-help:
-	@echo "Available targets:"
-	@echo "  resources-deploy [app1 app2 ...]  - Deploy sample application(s) to Kubernetes cluster"
-	@echo "                                      If app names are specified, deploy only those applications"
-	@echo "                                      If no app names specified, deploy all applications"
-	@echo "                                      Example: make resources-deploy hello-world"
-	@echo "  resources-destroy [app1 app2 ...] - Remove sample application(s) from Kubernetes cluster"
-	@echo "                                      If app names are specified, destroy only those applications"
-	@echo "                                      If no app names specified, destroy all applications"
-	@echo "                                      Example: make resources-destroy hello-world"
-	@echo "  resources-validate [app1 app2 ...] - Validate sample application(s) in Kubernetes cluster"
-	@echo "                                       If app names are specified, validate only those applications"
-	@echo "                                       If no app names specified, validate all applications"
-	@echo "                                       Example: make resources-validate hello-world"
-	@echo "  help                               - Show this help message"

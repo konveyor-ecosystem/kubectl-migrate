@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
+
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Download dependencies
+      run: make deps
+
+    - name: Build all platforms
+      run: make build-all
+
+    - name: Create archives
+      run: |
+        cd bin
+        # Linux amd64
+        tar czf kubectl-migrate-linux-amd64.tar.gz kubectl-migrate-linux-amd64
+        # Linux arm64
+        tar czf kubectl-migrate-linux-arm64.tar.gz kubectl-migrate-linux-arm64
+        # Darwin amd64
+        tar czf kubectl-migrate-darwin-amd64.tar.gz kubectl-migrate-darwin-amd64
+        # Darwin arm64
+        tar czf kubectl-migrate-darwin-arm64.tar.gz kubectl-migrate-darwin-arm64
+        # Generate checksums
+        sha256sum *.tar.gz *.zip > checksums.txt
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          bin/*.tar.gz
+          bin/checksums.txt
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Update krew manifest with checksums
+      run: |
+        echo "Don't forget to update kubectl-migrate.yaml with the new checksums from bin/checksums.txt"
+        echo "and submit to krew-index repository"

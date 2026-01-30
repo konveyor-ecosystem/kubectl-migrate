@@ -1,0 +1,192 @@
+package apply
+
+import (
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
+
+	"github.com/konveyor-ecosystem/kubectl-migrate/internal/file"
+	"github.com/konveyor-ecosystem/kubectl-migrate/internal/flags"
+	"github.com/konveyor/crane-lib/apply"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"sigs.k8s.io/yaml"
+)
+
+type Options struct {
+	// Two GlobalFlags struct fields are needed
+	// 1. cobraGlobalFlags for explicit CLI args parsed by cobra
+	// 2. globalFlags for the args merged with values from the viper config file
+	cobraGlobalFlags *flags.GlobalFlags
+	globalFlags      *flags.GlobalFlags
+	// Two Flags struct fields are needed
+	// 1. cobraFlags for explicit CLI args parsed by cobra
+	// 2. Flags for the args merged with values from the viper config file
+	cobraFlags Flags
+	Flags
+}
+
+type Flags struct {
+	ExportDir    string `mapstructure:"export-dir"`
+	TransformDir string `mapstructure:"transform-dir"`
+	OutputDir    string `mapstructure:"output-dir"`
+}
+
+func (o *Options) Complete(c *cobra.Command, args []string) error {
+	// TODO: @shawn-hurley
+	return nil
+}
+
+func (o *Options) Validate() error {
+	// TODO: @shawn-hurley
+	return nil
+}
+
+func (o *Options) Run() error {
+	return o.run()
+}
+
+func NewApplyCommand(f *flags.GlobalFlags) *cobra.Command {
+	o := &Options{
+		cobraGlobalFlags: f,
+		globalFlags:      f,
+	}
+	cmd := &cobra.Command{
+		Use:   "apply",
+		Short: "Apply the transformations to the exported resources and save results in an output directory",
+		RunE: func(c *cobra.Command, args []string) error {
+			if err := o.Complete(c, args); err != nil {
+				return err
+			}
+			if err := o.Validate(); err != nil {
+				return err
+			}
+			if err := o.Run(); err != nil {
+				return err
+			}
+
+			return nil
+		},
+		PreRun: func(cmd *cobra.Command, args []string) {
+			_ = viper.BindPFlags(cmd.Flags())
+			_ = viper.Unmarshal(&o.Flags)
+			_ = viper.Unmarshal(&o.globalFlags)
+		},
+	}
+
+	addFlagsForOptions(&o.cobraFlags, cmd)
+
+	return cmd
+}
+
+func addFlagsForOptions(o *Flags, cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&o.ExportDir, "export-dir", "e", "export", "The path where the kubernetes resources are saved")
+	cmd.Flags().StringVarP(&o.TransformDir, "transform-dir", "t", "transform", "The path where files that contain the transformations are saved")
+	cmd.Flags().StringVarP(&o.OutputDir, "output-dir", "o", "output", "The path where files are to be saved after transformation are applied")
+}
+
+func (o *Options) run() error {
+	log := o.globalFlags.GetLogger()
+	a := apply.Applier{}
+
+	// Load all the resources from the export dir
+	exportDir, err := filepath.Abs(o.ExportDir)
+	if err != nil {
+		// Handle errors better for users.
+		return err
+	}
+
+	transformDir, err := filepath.Abs(o.TransformDir)
+	if err != nil {
+		return err
+	}
+
+	outputDir, err := filepath.Abs(o.OutputDir)
+	if err != nil {
+		return err
+	}
+
+	files, err := file.ReadFiles(context.TODO(), exportDir)
+	if err != nil {
+		return err
+	}
+
+	opts := file.PathOpts{
+		TransformDir: transformDir,
+		ExportDir:    exportDir,
+		OutputDir:    outputDir,
+	}
+
+	//TODO: @shawn-hurley handle case where transform or whiteout file is not present.
+	for _, f := range files {
+		whPath := opts.GetWhiteOutFilePath(f.Path)
+		_, statErr := os.Stat(whPath)
+		if statErr == nil {
+			// Whiteout file exists - skip this resource
+			log.Infof("resource file: %v is skipped due to white file: %v", f.Info.Name(), whPath)
+			continue
+		} else if !errors.Is(statErr, os.ErrNotExist) {
+			// Unexpected error (not "file not found") - surface it
+			log.Errorf("error checking whiteout file %v for resource %v: %v", whPath, f.Info.Name(), statErr)
+			return statErr
+		}
+		// statErr is ErrNotExist - whiteout file doesn't exist, process the resource
+
+		// Set doc to the object, only update the file if the transfrom file exists
+		doc, err := f.Unstructured.MarshalJSON()
+		if err != nil {
+			return err
+		}
+
+		tfPath := opts.GetTransformPath(f.Path)
+		// Check if transform file exists
+		// If the transform does not exist, assume that the resource file is
+		// not needed and ignore for now.
+		_, tfStatErr := os.Stat(tfPath)
+		if tfStatErr != nil && !errors.Is(tfStatErr, os.ErrNotExist) {
+			// Some other error here err out
+			return tfStatErr
+		}
+
+		if !errors.Is(tfStatErr, os.ErrNotExist) {
+			transformfile, err := os.ReadFile(tfPath)
+			if err != nil {
+				return err
+			}
+
+			doc, err = a.Apply(f.Unstructured, transformfile)
+			if err != nil {
+				return err
+			}
+		}
+
+		y, err := yaml.JSONToYAML(doc)
+		if err != nil {
+			return err
+		}
+		outputFilePath := opts.GetOutputFilePath(f.Path)
+		if err := o.writeOutputFile(outputFilePath, y); err != nil {
+			return err
+		}
+		log.Debugf("wrote file: %v", outputFilePath)
+	}
+
+	return nil
+}
+
+// writeOutputFile writes content to outputFilePath, creating parent directories as needed.
+// The file is closed immediately after writing to avoid accumulating file handles.
+func (o *Options) writeOutputFile(outputFilePath string, content []byte) error {
+	err := os.MkdirAll(filepath.Dir(outputFilePath), 0755)
+	if err != nil {
+		return err
+	}
+	outputFile, err := os.Create(outputFilePath)
+	if err != nil {
+		return err
+	}
+	defer outputFile.Close()
+	_, err = outputFile.Write(content)
+	return err
+}
