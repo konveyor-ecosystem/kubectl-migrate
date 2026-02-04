@@ -1,0 +1,21 @@
+# kubectl-migrate Test Configuration Template
+# 
+# Copy this file to config.yaml and update with your cluster details:
+#   cp config.yaml.template config.yaml
+#
+# Then edit config.yaml with your actual cluster contexts from:
+#   kubectl config get-contexts
+
+clusters:
+  # Source cluster configuration
+  source:
+    name: "src_cluster"              # Friendly name for the cluster
+    context: "kind-src-cluster"      # Context name from 'kubectl config get-contexts'
+  
+  # Target cluster configuration
+  target:
+    name: "tgt_cluster"              # Friendly name for the cluster
+    context: "kind-tgt-cluster"      # Context name from 'kubectl config get-contexts'
+
+# IMPORTANT: The 'context' value must exactly match the NAME column from:
+#   kubectl config get-contexts

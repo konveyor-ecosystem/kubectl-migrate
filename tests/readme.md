@@ -91,12 +91,10 @@ Edit `config.yaml` with your actual cluster contexts:
 clusters:
   source:
     name: "src_cluster"
-    type: "kind"                    # Options: kind, minikube, openshift
     context: "kind-src-cluster"     # Must match kubectl context name
   
   target:
     name: "tgt_cluster"
-    type: "kind"
     context: "kind-tgt-cluster"     # Must match kubectl context name
 ```
 

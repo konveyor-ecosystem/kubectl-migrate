@@ -4,34 +4,17 @@ import (
     "fmt"
 )
 
-// ClusterType represents the type of Kubernetes cluster
-type ClusterType string
-
-const (
-    ClusterTypeKind      ClusterType = "kind"
-    ClusterTypeMinikube  ClusterType = "minikube"
-    ClusterTypeOpenShift ClusterType = "openshift"
-    ClusterTypeGeneric   ClusterType = "generic"
-)
-
 // Cluster represents a Kubernetes cluster with its context and type
 type Cluster struct {
     Name        string
     Context     string
-    Type        ClusterType
-    IsOpenShift bool
 }
 
 // NewClusterWithContext creates a cluster with explicit context
-func NewClusterWithContext(name, context string, clusterType ClusterType) *Cluster {
+func NewClusterWithContext(name, context string) *Cluster {
     cluster := &Cluster{
         Name:    name,
         Context: context,
-        Type:    clusterType,
-    }
-    
-    if clusterType == ClusterTypeOpenShift {
-        cluster.IsOpenShift = true
     }
     
     return cluster
@@ -105,7 +88,7 @@ func (c *Cluster) GetPods(namespace string) CommandResult {
 
 // String returns a string representation of the cluster
 func (c *Cluster) String() string {
-    return fmt.Sprintf("%s (%s) - context: %s", c.Name, c.Type, c.Context)
+    return fmt.Sprintf("%s - context: %s", c.Name, c.Context)
 }
 
 // Helper function to check if a string contains a substring

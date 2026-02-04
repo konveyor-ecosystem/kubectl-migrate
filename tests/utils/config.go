@@ -12,7 +12,6 @@ import (
 // ClusterConfig holds configuration for a single cluster
 type ClusterConfig struct {
     Name    string `yaml:"name"`
-    Type    string `yaml:"type"`
     Context string `yaml:"context"`
 }
 
@@ -83,52 +82,18 @@ func LoadConfig(configPath string) (*Config, error) {
     return loadConfigFromPath(configPath)
 }
 
-// CreateSourceCluster creates a Cluster instance from source config
-func (c *Config) CreateSourceCluster() (*Cluster, error) {
-    clusterType := parseClusterType(c.Clusters.Source.Type)
+// CreateCluster creates a Cluster instance from a ClusterConfig
+func (c *Config) CreateCluster(clusterConfig ClusterConfig) (*Cluster, error) {
     
     cluster := NewClusterWithContext(
-        c.Clusters.Source.Name,
-        c.Clusters.Source.Context,
-        clusterType,
+        clusterConfig.Name,
+        clusterConfig.Context,
     )
     
     // Verify connectivity
     if err := cluster.CheckConnectivity(); err != nil {
-        return nil, fmt.Errorf("failed to connect to source cluster: %w", err)
+        return nil, fmt.Errorf("failed to connect to cluster %s: %w", clusterConfig.Name, err)
     }
     
     return cluster, nil
-}
-
-// CreateTargetCluster creates a Cluster instance from target config
-func (c *Config) CreateTargetCluster() (*Cluster, error) {
-    clusterType := parseClusterType(c.Clusters.Target.Type)
-    
-    cluster := NewClusterWithContext(
-        c.Clusters.Target.Name,
-        c.Clusters.Target.Context,
-        clusterType,
-    )
-    
-    // Verify connectivity
-    if err := cluster.CheckConnectivity(); err != nil {
-        return nil, fmt.Errorf("failed to connect to target cluster: %w", err)
-    }
-    
-    return cluster, nil
-}
-
-// parseClusterType converts string to ClusterType
-func parseClusterType(typeStr string) ClusterType {
-    switch typeStr {
-    case "kind":
-        return ClusterTypeKind
-    case "minikube":
-        return ClusterTypeMinikube
-    case "openshift":
-        return ClusterTypeOpenShift
-    default:
-        return ClusterTypeGeneric
-    }
 }

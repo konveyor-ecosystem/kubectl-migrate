@@ -28,20 +28,18 @@ func SetupClusters() {
     // Create and verify source cluster
     GinkgoWriter.Println("\nConnecting to source cluster...")
     GinkgoWriter.Printf("   - Name: %s\n", config.Clusters.Source.Name)
-    GinkgoWriter.Printf("   - Type: %s\n", config.Clusters.Source.Type)
     GinkgoWriter.Printf("   - Context: %s\n", config.Clusters.Source.Context)
     
-    SrcCluster, err = config.CreateSourceCluster()
+    SrcCluster, err = config.CreateCluster(config.Clusters.Source)
     Expect(err).NotTo(HaveOccurred(), "Failed to connect to source cluster")
     GinkgoWriter.Printf("✓ Source cluster connected: %s\n", SrcCluster)
     
     // Create and verify target cluster
     GinkgoWriter.Println("\nConnecting to target cluster...")
     GinkgoWriter.Printf("   - Name: %s\n", config.Clusters.Target.Name)
-    GinkgoWriter.Printf("   - Type: %s\n", config.Clusters.Target.Type)
     GinkgoWriter.Printf("   - Context: %s\n", config.Clusters.Target.Context)
     
-    TgtCluster, err = config.CreateTargetCluster()
+    TgtCluster, err = config.CreateCluster(config.Clusters.Target)
     Expect(err).NotTo(HaveOccurred(), "Failed to connect to target cluster")
     GinkgoWriter.Printf("✓ Target cluster connected: %s\n", TgtCluster)
     
