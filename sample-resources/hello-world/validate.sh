@@ -64,7 +64,7 @@ HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" --max-time "$TIMEOUT" "$URL" 2>&1)
 HTTP_STATUS=$(echo "$HTTP_RESPONSE" | tail -n 1)
 
 # Extract response body (everything except last line)
-RESPONSE_BODY=$(echo "$HTTP_RESPONSE" | head -n -1)
+RESPONSE_BODY=$(echo "$HTTP_RESPONSE" | sed '$d')
 
 echo "HTTP Status: $HTTP_STATUS"
 
