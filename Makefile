@@ -156,6 +156,7 @@ resources-destroy: ## Remove sample application(s) from cluster (optionally spec
 			fi \
 		done; \
 		echo "All applications destroyed successfully!"; \
+	fi
 
 resources-validate: ## Validate sample application(s) in cluster (optionally specify app names)
 	@if [ "$(filter-out $@,$(MAKECMDGOALS))" ]; then \
