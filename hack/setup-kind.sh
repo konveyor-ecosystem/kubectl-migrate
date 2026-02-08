@@ -3,7 +3,6 @@
 set -e
 
 # Source the utility script
-# This allows the script to use functions defined in utils.sh
 source "$(dirname "$0")/utils.sh"
 
 # Colors for output
