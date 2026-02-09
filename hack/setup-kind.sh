@@ -36,6 +36,8 @@ echo -e "${YELLOW}Detected OS: $OS, Architecture: $ARCH${NC}"
 install_kubectl
 
 # --- Part 2: Install kind ---
+SKIP_INSTALL=false
+
 # Check if kind is already installed
 if command -v kind &> /dev/null; then
     CURRENT_VERSION=$(kind version 2>/dev/null || echo "unknown")
