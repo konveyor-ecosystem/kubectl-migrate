@@ -16,6 +16,8 @@ echo -e "${GREEN}=== Minikube Setup Script ===${NC}"
 # Ensure kubectl installed
 install_kubectl
 
+SKIP_INSTALL=false
+
 # Detect OS and architecture
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
