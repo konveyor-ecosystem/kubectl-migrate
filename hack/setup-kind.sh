@@ -2,6 +2,9 @@
 
 set -e
 
+# Source the utility script
+source "$(dirname "$0")/utils.sh"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -28,6 +31,12 @@ case $ARCH in
 esac
 
 echo -e "${YELLOW}Detected OS: $OS, Architecture: $ARCH${NC}"
+
+# --- Part 1: Ensure kubectl is installed ---
+install_kubectl
+
+# --- Part 2: Install kind ---
+SKIP_INSTALL=false
 
 # Check if kind is already installed
 if command -v kind &> /dev/null; then
@@ -64,7 +73,7 @@ if [[ "$SKIP_INSTALL" != "true" ]]; then
     kind version
 fi
 
-# Detect container runtime (Podman or Docker)
+# --- Part 3: Runtime Detection & Fedora/Podman Fixes ---
 CONTAINER_RUNTIME=""
 if command -v podman &> /dev/null; then
     echo -e "${YELLOW}Detected Podman${NC}"
@@ -111,13 +120,10 @@ if command -v podman &> /dev/null; then
             fi
         fi
         
-        # Verify podman is working (after starting machine)
-        if ! podman info &> /dev/null; then
-            echo -e "${RED}Error: Podman machine started but not working correctly${NC}"
-            exit 1
-        fi
-        
     elif [[ "$OS" == "linux" ]]; then
+        # Fedora/Linux specific: kind needs the experimental provider flag for Podman
+        export KIND_EXPERIMENTAL_PROVIDER=podman
+
         # Linux - verify podman is working first
         if ! podman info &> /dev/null; then
             echo -e "${RED}Error: Podman is installed but not working correctly${NC}"
@@ -133,6 +139,12 @@ if command -v podman &> /dev/null; then
         
         export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock
         echo -e "${GREEN}Using Podman socket: $DOCKER_HOST${NC}"
+    fi
+
+    # Final verify podman is working (after machine start or socket setup)
+    if ! podman info &> /dev/null; then
+        echo -e "${RED}Error: Podman is active but not responding correctly${NC}"
+        exit 1
     fi
 
     # Create docker symlink if it doesn't exist (some tools expect 'docker' command)
@@ -190,7 +202,9 @@ if kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
         echo -e "${YELLOW}Deleting existing cluster...${NC}"
         kind delete cluster --name "${CLUSTER_NAME}"
     else
-        echo -e "${GREEN}Using existing cluster${NC}"
+        echo -e "${GREEN}Using existing cluster. Re-syncing kubeconfig...${NC}"
+        # Fedora Fix: Re-exporting config ensures the dynamic port is updated
+        kind export kubeconfig --name "${CLUSTER_NAME}"
         kubectl config use-context "kind-${CLUSTER_NAME}"
         exit 0
     fi
@@ -202,6 +216,8 @@ kind create cluster --name "${CLUSTER_NAME}"
 
 # Verify cluster is running
 echo -e "${GREEN}Verifying cluster status...${NC}"
+# Re-syncing config here is a safety measure for rootless Podman
+kind export kubeconfig --name "${CLUSTER_NAME}"
 kubectl cluster-info --context "kind-${CLUSTER_NAME}"
 
 # Configure kubectl context
