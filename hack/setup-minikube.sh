@@ -2,6 +2,9 @@
 
 set -e
 
+# Source the utility script
+source "$(dirname "$0")/utils.sh"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -9,6 +12,11 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}=== Minikube Setup Script ===${NC}"
+
+# Ensure kubectl installed
+install_kubectl
+
+SKIP_INSTALL=false
 
 # Detect OS and architecture
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -89,11 +97,18 @@ fi
 echo -e "${GREEN}Starting minikube cluster...${NC}"
 
 # Select driver based on OS
-if [[ "$OS" == "linux" ]]; then
-    DRIVER="kvm2"
-elif [[ "$OS" == "darwin" ]]; then
-    DRIVER="docker"  # or hyperkit if available
-fi
+case $OS in
+    linux)
+        DRIVER="kvm2"
+        ;;
+    darwin)
+        DRIVER="docker"  # or hyperkit if available
+        ;;
+    *)
+        echo -e "${RED}Error: Unsupported operating system '$OS'. Cannot determine Minikube driver.${NC}"
+        exit 1
+        ;;
+esac
 echo -e "${YELLOW}Using driver: $DRIVER${NC}"
 
 # Check if libvirt is installed (required for kvm2)
