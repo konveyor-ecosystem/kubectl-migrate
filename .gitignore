@@ -38,3 +38,6 @@ temp/
 /transform/
 *.export/
 *.transform/
+
+# Test configuration
+tests/config.yaml
